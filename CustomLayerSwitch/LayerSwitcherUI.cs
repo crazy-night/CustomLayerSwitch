@@ -114,7 +114,7 @@ namespace StudioCustomLayerSwitcher
             }
             catch (Exception value)
             {
-                Console.WriteLine(value);
+                LayerSwitcher.Debug(value);
                 this.ResetGui();
             }
         }
