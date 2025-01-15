@@ -1,22 +1,16 @@
-﻿using AIChara;
-using Studio;
-using StudioCustomLayerSwitch;
+﻿using Studio;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
-using static UnityStandardAssets.CinematicEffects.DepthOfField;
+using KKAPI.Utilities;
+
 
 namespace StudioCustomLayerSwitcher
 {
     internal class LayerSwitcherUI : MonoBehaviour
     {
 
-        static public readonly string[] MALE_CLOTHES_NAME = { "Top", "Bot", "Gloves", "Shoes" };
-        static public readonly string[] FEMALE_CLOTHES_NAME = { "Top", "Bot", "Inner_t", "Inner_b", "Gloves", "Panst", "Socks", "Shoes" };
+
         static public readonly Dictionary<int, string> LAYERTAGS = new Dictionary<int, string>()
         {
             { 14, "HideInPlane" },
@@ -25,8 +19,12 @@ namespace StudioCustomLayerSwitcher
             { 0, "None" }
         };
         static public readonly int[] LAYERINDEXES = { 14, 10, 9 };
+        static public readonly string[] CATEGORY = { "Clothes", "Accessories" };
+        public enum Category { Clothes = 0, Accessories = 1 };
+        public Category category = Category.Clothes;
         public int layerIndex = 14;
         public CharaLayerController charaLayerCtrl;
+        private Vector2 scrollPosition;
 
         public bool VisibleGUI { get; set; }
 
@@ -34,6 +32,8 @@ namespace StudioCustomLayerSwitcher
         public void ResetGui()
         {
             this.ociTarget = null;
+            this.layerIndex = 14;
+            this.category = 0;
         }
 
         // Token: 0x06000094 RID: 148 RVA: 0x00004CFC File Offset: 0x00002EFC
@@ -71,7 +71,6 @@ namespace StudioCustomLayerSwitcher
                     this.OnSelectChange(currentSelectedNode);
                 }
             }
-            LayerSwitcherMgr.Instance.HouseKeeping(VisibleGUI);
         }
 
         // Token: 0x06000096 RID: 150 RVA: 0x00004E54 File Offset: 0x00003054
@@ -114,7 +113,7 @@ namespace StudioCustomLayerSwitcher
             }
             catch (Exception value)
             {
-                LayerSwitcher.Debug(value);
+                Console.WriteLine(value);
                 this.ResetGui();
             }
         }
@@ -122,16 +121,17 @@ namespace StudioCustomLayerSwitcher
         {
             float fullw = windowRect.width - 20;
             float fullh = windowRect.height - 20;
-            float leftw = 150;
-            float rightw = fullw - 8 - leftw - 5;
-            charaLayerCtrl = LayerSwitcherMgr.Instance.GetCharaLayerController(ociTarget);
+            float toph = fullh - 200;
+            float leftw = 180;
+            float rightw = fullw - 10 - leftw - 28;
+            charaLayerCtrl = LayerSwitcherMgr.GetCharaLayerController(ociTarget);
 
             if (ociTarget == null || charaLayerCtrl == null)
             {
                 GUILayout.FlexibleSpace();
                 GUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                GUILayout.Label("<color=#00ffff>" + "Please select a charactor to edit." + "</color>", largeLabel);
+                GUILayout.Label("<color=#00ffff>" + "Please select a charactor to edit." + "</color>", largeLabel,IMGUIUtils.EmptyLayoutOptions);
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
                 GUILayout.FlexibleSpace();
@@ -140,7 +140,9 @@ namespace StudioCustomLayerSwitcher
             {
                 GUILayout.BeginVertical();
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("Current layerIndex setting: ", largeLabel);
+                GUILayout.FlexibleSpace();
+                GUILayout.Label("Current LayerIndex Setting: " + charaLayerCtrl.name, largeLabel,IMGUIUtils.EmptyLayoutOptions);
+                GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
 
                 GUILayout.BeginHorizontal();
@@ -151,7 +153,7 @@ namespace StudioCustomLayerSwitcher
                     {
                         GUI.color = Color.red;
                     }
-                    if (GUILayout.Button(LAYERTAGS[LAYERINDEXES[i]], btnstyle))
+                    if (GUILayout.Button(LAYERTAGS[LAYERINDEXES[i]], btnstyle,IMGUIUtils.EmptyLayoutOptions))
                     {
                         layerIndex = LAYERINDEXES[i];
                     }
@@ -159,63 +161,158 @@ namespace StudioCustomLayerSwitcher
                 }
                 GUILayout.EndHorizontal();
 
-                int index = 0;
-                bool[] click = new bool[8];
-                string[] clothesNames = GetClothesNames(charaLayerCtrl.isMale);
-
                 GUILayout.BeginHorizontal();
-
-                GUILayout.BeginVertical(GUILayout.Width(leftw + 8));
-                foreach (string clothName in clothesNames)
+                for (int i = 0; i < 2; i++)
                 {
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label(clothName, largeLabel);
-                    GUILayout.EndHorizontal();
-                }
-                GUILayout.EndVertical();
-
-
-                GUILayout.BeginVertical(GUILayout.Width(rightw));
-                foreach (string clothName in clothesNames)
-                {
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label(LAYERTAGS[charaLayerCtrl.layers[index]].ToString(), largeLabel);
-                    GUILayout.FlexibleSpace();
-                    if (charaLayerCtrl.layers[index] != 0)
+                    Color color = GUI.color;
+                    if ((int)category == i)
                     {
-                        click[index++] = GUILayout.Button("Set layerIndex", btnstyle);
+                        GUI.color = Color.red;
                     }
-                    else
+                    if (GUILayout.Button(CATEGORY[i], btnstyle, IMGUIUtils.EmptyLayoutOptions))
                     {
-                        GUILayout.Label("No clothes", largeLabel);
-                        click[index++] = false;
+                        category = (Category)i;
                     }
-                    GUILayout.EndHorizontal();
+                    GUI.color = color;
                 }
-                GUILayout.EndVertical();
-
                 GUILayout.EndHorizontal();
 
-                GUILayout.BeginHorizontal();
-                bool flag = GUILayout.Button("Set all layers", btnstyle);
-                GUILayout.EndHorizontal();
-
-
-
-                for (int i = 0; i < index; ++i)
+                if (category == Category.Clothes)
                 {
-                    if (flag || click[i])
+                    int index = charaLayerCtrl.ClothesNames.Length;
+                    bool[] click = new bool[8];
+                    string[] clothesNames = charaLayerCtrl.ClothesNames;
+
+                    GUILayout.BeginHorizontal();
+
+                    GUILayout.BeginVertical(GUILayout.Width(leftw + 10));
+                    foreach (string clothName in clothesNames)
                     {
-                        if (charaLayerCtrl.clothes[i].Count != 0)
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label(clothName, largeLabel, IMGUIUtils.EmptyLayoutOptions);
+                        GUILayout.EndHorizontal();
+                    }
+                    GUILayout.EndVertical();
+
+
+                    GUILayout.BeginVertical(GUILayout.Width(rightw));
+                    for (int i = 0; i < index; ++i)
+                    {
+                        GUILayout.BeginHorizontal();
+                        if (!LAYERTAGS.ContainsKey(charaLayerCtrl.ClothesLayers[i]))
                         {
-                            foreach (GameObject obj in charaLayerCtrl.clothes[i])
-                            {
-                                obj.layer = layerIndex;
-                            }
-                            charaLayerCtrl.Update(i, layerIndex);
+                            GUILayout.Label("Layer " + charaLayerCtrl.ClothesLayers[i].ToString(), largeLabel, IMGUIUtils.EmptyLayoutOptions);
+                        }
+                        else
+                        {
+                            GUILayout.Label(LAYERTAGS[charaLayerCtrl.ClothesLayers[i]].ToString(), largeLabel, IMGUIUtils.EmptyLayoutOptions);
+                        }
+                        GUILayout.FlexibleSpace();
+                        if (charaLayerCtrl.ClothesLayers[i] != 0)
+                        {
+                            click[i] = GUILayout.Button("Set Layer Index", btnstyle, IMGUIUtils.EmptyLayoutOptions);
+                        }
+                        else
+                        {
+                            GUILayout.Label("No Clothes", largeLabel, IMGUIUtils.EmptyLayoutOptions);
+                            click[i] = false;
+                        }
+                        GUILayout.EndHorizontal();
+                    }
+                    GUILayout.EndVertical();
+
+                    GUILayout.EndHorizontal();
+
+
+                    GUILayout.BeginHorizontal();
+                    bool flag = GUILayout.Button("Set All Layers", btnstyle, IMGUIUtils.EmptyLayoutOptions);
+                    GUILayout.EndHorizontal();
+
+                    for (int i = 0; i < index; ++i)
+                    {
+                        if (flag || click[i])
+                        {
+                            charaLayerCtrl.SetClothesLayer(i, layerIndex);
                         }
                     }
                 }
+                else
+                {
+                    int index = charaLayerCtrl.ACCESSORY_NAME.Length;
+                    bool[] click = new bool[index];
+                    string[] accessoryNames = charaLayerCtrl.AccessoryNames;
+
+                    scrollPosition = GUILayout.BeginScrollView(scrollPosition, GUILayout.Width(fullw), GUILayout.Height(toph));
+
+                    GUILayout.BeginHorizontal();
+
+                    GUILayout.BeginVertical(GUILayout.Width(leftw + 10));
+                    foreach (string accessoryName in accessoryNames)
+                    {
+                        GUILayout.BeginHorizontal();
+                        if (accessoryName == null)
+                        {
+                            GUILayout.Label("No Accessory", largeLabel, IMGUIUtils.EmptyLayoutOptions);
+                        }
+                        else
+                        {
+                            GUILayout.Label(accessoryName, largeLabel, IMGUIUtils.EmptyLayoutOptions);
+                        }
+                        GUILayout.EndHorizontal();
+                    }
+                    GUILayout.EndVertical();
+
+
+                    GUILayout.BeginVertical(GUILayout.Width(rightw));
+                    for (int i = 0; i < index; ++i)
+                    {
+                        GUILayout.BeginHorizontal();
+                        if (!LAYERTAGS.ContainsKey(charaLayerCtrl.AccessoryLayers[i]))
+                        {
+                            GUILayout.Label("Layer " + charaLayerCtrl.AccessoryLayers[i].ToString(), largeLabel, IMGUIUtils.EmptyLayoutOptions);
+                        }
+                        else
+                        {
+                            GUILayout.Label(LAYERTAGS[charaLayerCtrl.AccessoryLayers[i]].ToString(), largeLabel, IMGUIUtils.EmptyLayoutOptions);
+                        }
+                        GUILayout.FlexibleSpace();
+                        if (charaLayerCtrl.AccessoryLayers[i] != 0)
+                        {
+                            click[i] = GUILayout.Button("Set Layer Index", btnstyle, IMGUIUtils.EmptyLayoutOptions);
+                        }
+                        else
+                        {
+                            GUILayout.Label("No Accessory", largeLabel, IMGUIUtils.EmptyLayoutOptions);
+                            click[i] = false;
+                        }
+                        GUILayout.EndHorizontal();
+                    }
+                    GUILayout.EndVertical();
+
+                    GUILayout.EndHorizontal();
+                    GUILayout.EndScrollView();
+
+
+                    GUILayout.BeginHorizontal();
+                    bool flag = GUILayout.Button("Set All Layers", btnstyle, IMGUIUtils.EmptyLayoutOptions);
+                    GUILayout.EndHorizontal();
+
+                    for (int i = 0; i < index; ++i)
+                    {
+                        if (flag || click[i])
+                        {
+                            charaLayerCtrl.SetAccessoryLayer(i, layerIndex);
+                        }
+                    }
+                }
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Clear", btnstyle, IMGUIUtils.EmptyLayoutOptions))
+                {
+                    LayerSwitcherMgr.UpdateDict(ociTarget.charInfo);
+                }
+                GUILayout.EndHorizontal();
+
 
                 GUILayout.EndVertical();
 
@@ -237,7 +334,6 @@ namespace StudioCustomLayerSwitcher
         {
             lastSelectedTreeNode = newSel;
             ociTarget = GetOCICharFromNode(newSel);
-            //Console.WriteLine("Select change to {0}", ociTarget);
         }
 
         protected TreeNodeObject GetCurrentSelectedNode()
@@ -255,7 +351,6 @@ namespace StudioCustomLayerSwitcher
                 ObjectCtrlInfo oci = dic[node];
                 if (oci is OCIChar)
                 {
-                    //Console.WriteLine("OCIChar found");
                     return oci as OCIChar;
                 }
                 else
@@ -268,17 +363,7 @@ namespace StudioCustomLayerSwitcher
                 return null;
             }
         }
-        private string[] GetClothesNames(bool isMale)
-        {
-            if (isMale)
-            {
-                return MALE_CLOTHES_NAME;
-            }
-            else
-            {
-                return FEMALE_CLOTHES_NAME;
-            }
-        }
+
 
         // Token: 0x04000081 RID: 129
         private readonly int windowID = 1314150679;
