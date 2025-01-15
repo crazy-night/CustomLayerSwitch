@@ -1,152 +1,135 @@
-﻿using BepInEx;
-using Studio;
+﻿using Studio;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using ExtensibleSaveFormat;
-using UnityEngine;
-using BepInEx.Logging;
+using KKAPI.Studio;
+using KKAPI.Studio.SaveLoad;
+using KKAPI.Utilities;
+using AIChara;
 
-namespace StudioCustomLayerSwitch
+namespace StudioCustomLayerSwitcher
 {
-    [BepInProcess("StudioNEOV2")]
-    [BepInPlugin("SCLS.LoadLog", "LoadLog", "0.0.2")]
-    public class LoadLog : BaseUnityPlugin
+    public class LoadLog : SceneCustomFunctionController
     {
-        // Token: 0x0600000D RID: 13 RVA: 0x00002A78 File Offset: 0x00000C78
-        public void Awake()
-        {
-            LoadLog.Debug("Loading Chara Clothes Layer!");
-            ExtendedSave.SceneBeingLoaded += LoadLog.ExtendedSceneLoad;
-            ExtendedSave.SceneBeingImported += LoadLog.ExtendedSceneImport;
-            ExtendedSave.SceneBeingSaved += LoadLog.ExtendedSceneSave;
-        }
+        private readonly string infoKey = "LayerInfo";
 
-        // Token: 0x0600000E RID: 14 RVA: 0x00002068 File Offset: 0x00000268
         public static void Debug(string _text)
         {
-            BepInEx.Logging.Logger.CreateLogSource("SCLS").Log(LogLevel.Info, _text);
+            LayerSwitcher.Debug(_text);
         }
 
-        // Token: 0x0600000F RID: 15 RVA: 0x00002AC8 File Offset: 0x00000CC8
-        internal static void ExtendedSceneSave(string path)
+        protected override void OnSceneLoad(SceneOperationKind operation, ReadOnlyDictionary<int, ObjectCtrlInfo> loadedItems)
+        {
+            if (operation == SceneOperationKind.Clear)
+            {
+                LayerSwitcherMgr.Clear();
+                return;
+            }
+            else if (operation == SceneOperationKind.Load)
+            {
+                LayerSwitcherMgr.Clear();
+            }
+            PluginData sceneExtendedData = GetExtendedData();
+            if (sceneExtendedData != null && sceneExtendedData.data.ContainsKey(infoKey))
+            {
+                List<StudioLayerResolveInfo> list = (from x in (object[])sceneExtendedData.data[infoKey]
+                                                     select StudioLayerResolveInfo.Deserialize((byte[])x)).ToList<StudioLayerResolveInfo>();
+
+                foreach (StudioLayerResolveInfo studioLayerResolveInfo in list)
+                {
+                    if (loadedItems.TryGetValue(studioLayerResolveInfo.dicKey, out ObjectCtrlInfo objectCtrlInfo) && objectCtrlInfo is OCIChar ociChar)
+                    {
+
+                        CharaLayerController charaLayerController = LayerSwitcherMgr.GetCharaLayerController(ociChar);
+                        int i = 0;
+                        foreach (int layer in studioLayerResolveInfo.clothesLayers)
+                        {
+                            charaLayerController.SetClothesLayer(i++, layer);
+                        }
+                        LoadLog.Debug($"Studio Custom Layer Switch: Clothes Layers of {ociChar.charInfo.name} Reload Successfully!");
+
+                        i = 0;
+                        foreach (int layer in studioLayerResolveInfo.accessoryLayers)
+                        {
+                            charaLayerController.SetAccessoryLayer(i++, layer);
+                        }
+                        LoadLog.Debug($"Studio Custom Layer Switch: Accessory Layers of {ociChar.charInfo.name} Reload Successfully!");
+                    }
+                    else
+                    {
+                        throw new Exception("Studio Custom Layer Switch: Failed to find character!");
+                    }
+
+                }
+            }
+        }
+
+        protected override void OnSceneSave()
         {
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
             List<StudioLayerResolveInfo> list = new List<StudioLayerResolveInfo>();
-            Dictionary<int, ObjectCtrlInfo> dicObjectCtrl = Singleton<Studio.Studio>.Instance.dicObjectCtrl;
-            foreach (ObjectCtrlInfo objectCtrlInfo in dicObjectCtrl.Values)
+            foreach (ChaControl charInfo in LayerSwitcherMgr.charaLayerCtrlDict.Keys)
             {
-                if (objectCtrlInfo is OCIChar)
+                OCIChar ociChar = LayerSwitcherMgr.charaDict[charInfo];
+                CharaLayerController charaLayerController = LayerSwitcherMgr.GetCharaLayerController(ociChar);
+                if (charaLayerController.HasChanged)
                 {
-                    OCIChar ociTarget = (OCIChar)objectCtrlInfo;
-                    if (ociTarget != null)
+                    StudioLayerResolveInfo studioLayerResolveInfo = new StudioLayerResolveInfo
                     {
-                        CharaLayerController charaLayerController = new CharaLayerController(ociTarget);
-                        StudioLayerResolveInfo studioLayerResolveInfo = new StudioLayerResolveInfo();
-                        studioLayerResolveInfo.dicKey = ociTarget.objectInfo.dicKey;
-                        foreach (int layer in charaLayerController.layers)
-                        {
-                            studioLayerResolveInfo.layers.Add(layer);
-                            list.Add(studioLayerResolveInfo);
-                        }
-                        string text = string.Concat(new string[]
-                        {   "SaveClothesLayerInfo!dickey:",
-                            studioLayerResolveInfo.dicKey.ToString()
-                        });
-                        LoadLog.Debug(text);
+                        dicKey = ociChar.oiCharInfo.dicKey
+                    };
+
+                    foreach (int layer in charaLayerController.ClothesLayers)
+                    {
+                        studioLayerResolveInfo.clothesLayers.Add(layer);
                     }
-                }
-            }
-            if (list != null)
-            {
-                if (list.Count != 0)
-                {
-                    dictionary.Add("ClothesLayerInfo", (from x in list
-                                                        select x.Serialize()).ToList<byte[]>());
-                }
-            }
-            if (dictionary.Count == 0)
-            {
-                ExtendedSave.SetSceneExtendedDataById("Studio Clothes Layers", null);
-            }
-            else
-            {
-                ExtendedSave.SetSceneExtendedDataById("Studio Clothes Layers", new PluginData
-                {
-                    data = dictionary
-                });
-            }
-        }
-
-        // Token: 0x06000010 RID: 16 RVA: 0x0000207E File Offset: 0x0000027E
-        internal static void ExtendedSceneLoad(string path)
-        {
-            Singleton<Studio.Studio>.Instance.DelayToDo(0.5f, delegate
-            {
-                LoadLog.OnSceneLoad();
-            }, false);
-        }
-
-        // Token: 0x06000011 RID: 17 RVA: 0x00002FC8 File Offset: 0x000011C8
-        internal static void OnSceneLoad()
-        {
-            LoadInfo(0);
-        }
-
-        // Token: 0x06000012 RID: 18 RVA: 0x000020B1 File Offset: 0x000002B1
-        internal static void ExtendedSceneImport(string path)
-        {
-            Singleton<Studio.Studio>.Instance.DelayToDo(0.5f, delegate
-            {
-                LoadLog.OnSceneImport();
-            }, false);
-        }
-
-        // Token: 0x06000013 RID: 19 RVA: 0x00003414 File Offset: 0x00001614
-        internal static void OnSceneImport()
-        {
-            Dictionary<int, ObjectInfo> dicObject = Singleton<Studio.Studio>.Instance.sceneInfo.dicObject;
-            Dictionary<int, ObjectInfo> dicImport = Singleton<Studio.Studio>.Instance.sceneInfo.dicImport;
-            int offset = dicObject.Count - dicImport.Count;
-            LoadInfo(offset);
-        }
-        private static void LoadInfo(int offset)
-        {
-            PluginData sceneExtendedDataById = ExtendedSave.GetSceneExtendedDataById("Studio Clothes Layers");
-            Dictionary<int, ObjectCtrlInfo> dicObjectCtrl = Singleton<Studio.Studio>.Instance.dicObjectCtrl;
-            if (sceneExtendedDataById != null && sceneExtendedDataById.data.ContainsKey("ClothesLayerInfo"))
-            {
-                List<StudioLayerResolveInfo> list = (from x in (object[])sceneExtendedDataById.data["ClothesLayerInfo"]
-                                                     select StudioLayerResolveInfo.Deserialize((byte[])x)).ToList<StudioLayerResolveInfo>();
-                foreach (StudioLayerResolveInfo StudioLayerResolveInfo in list)
-                {
-                    ObjectCtrlInfo objectCtrlInfo = dicObjectCtrl[StudioLayerResolveInfo.dicKey + offset];
-                    if (objectCtrlInfo is OCIChar)
+                    foreach (int layer in charaLayerController.AccessoryLayers)
                     {
-                        OCIChar ociTarget = (OCIChar)objectCtrlInfo;
-                        if (ociTarget != null)
+                        studioLayerResolveInfo.accessoryLayers.Add(layer);
+                    }
+                    list.Add(studioLayerResolveInfo);
+                    LoadLog.Debug("SaveLayerInfo!dickey:" + studioLayerResolveInfo.dicKey.ToString());
+                }
+
+            }
+            if (list != null && list.Count > 0)
+            {
+                dictionary.Add(infoKey, (from x in list
+                                         select x.Serialize()).ToList<byte[]>());
+
+            }
+            SetExtendedData(dictionary.Count > 0 ? new PluginData { data = dictionary } : null);
+        }
+        protected override void OnObjectDeleted(ObjectCtrlInfo objectCtrlInfo)
+        {
+            if (objectCtrlInfo is OCIChar ociChar)
+            {
+                LayerSwitcherMgr.RemoveDict(ociChar.charInfo);
+            }
+        }
+        protected override void OnObjectsCopied(ReadOnlyDictionary<int, ObjectCtrlInfo> copiedItems)
+        {
+            foreach (KeyValuePair<int, ObjectCtrlInfo> kvp in copiedItems)
+            {
+                if (kvp.Value is OCIChar ociDST)
+                {
+                    if (GetStudio().dicObjectCtrl.TryGetValue(kvp.Key, out ObjectCtrlInfo oci))
+                    {
+                        OCIChar ociSRC = oci as OCIChar;
+                        if (LayerSwitcherMgr.charaLayerCtrlDict.ContainsKey(ociSRC.charInfo))
                         {
-                            CharaLayerController charaLayerController = new CharaLayerController(ociTarget);
-                            int i = 0;
-                            foreach (var cloth in charaLayerController.clothes)
+                            CharaLayerController charaLayerControllerSRC = LayerSwitcherMgr.GetCharaLayerController(ociSRC);
+                            if (charaLayerControllerSRC.HasChanged)
                             {
-                                int layer = StudioLayerResolveInfo.layers[i];
-                                if (layer != 0)
-                                {
-                                    foreach (var gameObject in cloth)
-                                    {
-                                        gameObject.layer = layer;
-                                    }
-                                }
-                                ++i;
+                                CharaLayerController charaLayerControllerDST = LayerSwitcherMgr.GetCharaLayerController(ociDST);
+                                charaLayerControllerDST.Copy(charaLayerControllerSRC);
                             }
                         }
                     }
                 }
             }
-        }
 
+        }
     }
 }

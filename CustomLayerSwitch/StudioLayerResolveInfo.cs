@@ -1,21 +1,27 @@
 ﻿using MessagePack;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace StudioCustomLayerSwitch
+namespace StudioCustomLayerSwitcher
 {
-    internal class StudioLayerResolveInfo
+    [MessagePackObject]
+    public class StudioLayerResolveInfo
     {
         
 
         [Key("dicKey")]
         public int dicKey { get; set; }
 
-        [Key("layers")]
-        public List<int> layers { get; set; }
+        [Key("clothesLayers")]
+        public List<int> clothesLayers;
+
+        [Key("accessoryLayers")]
+        public List<int> accessoryLayers;
+
+        public StudioLayerResolveInfo() 
+        {
+            clothesLayers = new List<int>();
+            accessoryLayers = new List<int>();
+        }
 
         internal static StudioLayerResolveInfo Deserialize(byte[] data)
         {

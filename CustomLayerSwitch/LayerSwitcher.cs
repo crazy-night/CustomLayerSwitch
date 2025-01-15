@@ -3,23 +3,18 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Studio;
 using AIChara;
 using UnityEngine;
-using System.Runtime.CompilerServices;
+using KKAPI.Studio.SaveLoad;
 
 namespace StudioCustomLayerSwitcher
 {
     [BepInPlugin(GUID, Name, Version)]
-    [BepInDependency("marco.kkapi", "1.4")]
+    [BepInDependency("Countd360.StudioCharaEditor.HS2")]
     [BepInProcess("StudioNEOV2.exe")]
     public class LayerSwitcher : BaseUnityPlugin
     {
-        public const string GUID = "PhoeniX.SCLS";
+        public const string GUID = "PhoeniX.StudioCustomLayerSwitcher";
         public const string Name = "Studio Custom Layer Switcher";
         public const string Version = "1.0";
         internal new static ManualLogSource Logger;
@@ -36,7 +31,7 @@ namespace StudioCustomLayerSwitcher
         public static ConfigEntry<int> UIWidth { get; private set; }
 
         public static ConfigEntry<int> UIHeight { get; private set; }
-        public static ConfigEntry<string> UILanguage { get; private set; }
+        //public static ConfigEntry<string> UILanguage { get; private set; }
         private void Awake()
         {
             LayerSwitcher.Instance = this;
@@ -54,25 +49,35 @@ namespace StudioCustomLayerSwitcher
             LayerSwitcher.UIYPosition = base.Config.Bind<int>("GUI", "Main GUI Y position", 300, "Y offset from top in pixel");
             LayerSwitcher.UIWidth = base.Config.Bind<int>("GUI", "Main GUI window width", 600, "Main window width, minimum 600, set it when UI is hided.");
             LayerSwitcher.UIHeight = base.Config.Bind<int>("GUI", "Main GUI window height", 400, "Main window height, minimum 400, set it when UI is hided.");
-            LayerSwitcher.UILanguage = base.Config.Bind<string>("GUI", "GUI Language", "default", "Language setting, valid setting can be found in HS2LayerSwitch.xml. Need reload.");
-            GameObject gameObject = new GameObject("Layer Switch");
+            //LayerSwitcher.UILanguage = base.Config.Bind<string>("GUI", "GUI Language", "default", "Language setting, valid setting can be found in HS2LayerSwitch.xml. Need reload.");
+
+
+            Harmony.CreateAndPatchAll(typeof(LayerSwitcherHook), GUID);
+
+            StudioSaveLoadApi.RegisterExtraBehaviour<LoadLog>(GUID);
+
+            GameObject gameObject = new GameObject("Layer Switcher");
             UnityEngine.Object.DontDestroyOnLoad(gameObject);
             LayerSwitcherMgr.Install(gameObject);
 
         }
-        
 
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(ChaControl), "AssignCoordinate")]
-        public static void ChaControl_AssignCoordinatePostfix(ChaControl __instance)
+        public static void Debug(string _text)
         {
-            bool verbose= LayerSwitcher.VerboseMessage.Value;
-            if (verbose) 
+            bool verbose = LayerSwitcher.VerboseMessage.Value;
+            if (verbose)
             {
-                Console.WriteLine("ChaControl_AssignCoordinatePostfix: Start");
+                //Console.WriteLine(_text);
+                LayerSwitcher.Logger.LogDebug(_text);
             }
-            LayerSwitcherMgr.UpdateDict(__instance);
-            // Add your postfix code here
+        }
+        public static void Warning(string _text)
+        {
+            bool verbose = LayerSwitcher.VerboseMessage.Value;
+            if (verbose)
+            {
+                LayerSwitcher.Logger.LogWarning(_text);
+            }
         }
     }
 }

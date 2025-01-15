@@ -31,8 +31,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>F:\Users\Administrator\Downloads\Compressed\BepInEx_x64_5.1.0.0\BepInEx\core\0Harmony.dll</HintPath>
+    <Reference Include="0Harmony, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>F:\Users\Administrator\Downloads\Compressed\BepInEx_x64_5.4.21.0\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>D:\HS2 DX - TSYMQ V6\HoneySelect2_Data\Managed\Assembly-CSharp.dll</HintPath>
@@ -42,18 +44,27 @@
       <HintPath>D:\HS2 DX - TSYMQ V6\HoneySelect2_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="BepInEx">
-      <HintPath>F:\Users\Administrator\Downloads\Compressed\BepInEx_x64_5.1.0.0\BepInEx\core\BepInEx.dll</HintPath>
+    <Reference Include="BepInEx, Version=5.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>F:\Users\Administrator\Downloads\Compressed\BepInEx_x64_5.4.21.0\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>False</Private>
     </Reference>
-    <Reference Include="BepInEx.Harmony">
-      <HintPath>F:\Users\Administrator\Downloads\Compressed\BepInEx_x64_5.1.0.0\BepInEx\core\BepInEx.Harmony.dll</HintPath>
+    <Reference Include="BepInEx.Harmony, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>F:\Users\Administrator\Downloads\Compressed\BepInEx_x64_5.4.21.0\BepInEx\core\BepInEx.Harmony.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="HS2API">
       <HintPath>D:\HS2 DX - TSYMQ V6\BepInEx\Plugins\HS2API.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="HS2StudioCharaEditor">
+      <HintPath>D:\HS2 DX - TSYMQ V6\BepInEx\Plugins\HS2StudioCharaEditor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="HS2_ExtensibleSaveFormat">
       <HintPath>D:\HS2 DX - TSYMQ V6\BepInEx\Plugins\HS2_BepisPlugins\HS2_ExtensibleSaveFormat.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="IL">
       <HintPath>D:\HS2 DX - TSYMQ V6\HoneySelect2_Data\Managed\IL.dll</HintPath>
@@ -77,6 +88,7 @@
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
       <HintPath>D:\HS2 DX - TSYMQ V6\HoneySelect2_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -84,9 +96,9 @@
     <Compile Include="LayerSwitcher.cs" />
     <Compile Include="LayerSwitcherMgr.cs" />
     <Compile Include="LayerSwitcherUI.cs" />
+    <Compile Include="LayerSwitcherHook.cs" />
     <Compile Include="LoadLog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StaticUtil.cs" />
     <Compile Include="StudioLayerResolveInfo.cs" />
   </ItemGroup>
   <ItemGroup>

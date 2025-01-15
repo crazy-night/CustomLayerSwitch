@@ -1,13 +1,7 @@
 ﻿using AIChara;
-using HS2;
 using Studio;
-using StudioCustomLayerSwitch;
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace StudioCustomLayerSwitcher
@@ -15,7 +9,8 @@ namespace StudioCustomLayerSwitcher
     internal class LayerSwitcherMgr : MonoBehaviour
     {
         public static LayerSwitcherMgr Instance { get; private set; }
-        static internal Dictionary<OCIChar, CharaLayerController> charaLayerCtrlDict = new Dictionary<OCIChar, CharaLayerController>();
+        static internal Dictionary<ChaControl, CharaLayerController> charaLayerCtrlDict = new Dictionary<ChaControl, CharaLayerController>();
+        static internal Dictionary<ChaControl, OCIChar> charaDict = new Dictionary<ChaControl, OCIChar>();
         public static LayerSwitcherMgr Install(GameObject container)
         {
             if (LayerSwitcherMgr.Instance == null)
@@ -54,57 +49,65 @@ namespace StudioCustomLayerSwitcher
             this.gui.VisibleGUI = false;
             yield break;
         }
-        
+
         public void ResetGUI()
         {
             this.gui.ResetGui();
         }
-        public void HouseKeeping(bool isVisible)
+
+        internal static CharaLayerController GetCharaLayerController(OCIChar ociTarget)
         {
-            // release deleted controller
-            if (isVisible)
-            {
-                foreach (OCIChar ociChar in charaLayerCtrlDict.Keys)
-                {
-                    if (ociChar.charInfo == null)
-                    {
-                        Console.WriteLine("Remove controller for deleted chara");
-                        charaLayerCtrlDict.Remove(ociChar);
-                        return;
-                    }
-                }
-            }
-        }
-        internal CharaLayerController GetCharaLayerController(OCIChar ociTarget)
-        {
-            if (ociTarget == null)
+            if (ociTarget == null || ociTarget.charInfo == null)
             {
                 return null;
             }
-            if (!charaLayerCtrlDict.ContainsKey(ociTarget))
+            if (!charaLayerCtrlDict.ContainsKey(ociTarget.charInfo))
             {
-                charaLayerCtrlDict[ociTarget] = new CharaLayerController(ociTarget);
+                charaLayerCtrlDict[ociTarget.charInfo] = new CharaLayerController(ociTarget.charInfo);
+                charaDict[ociTarget.charInfo] = ociTarget;
+                LayerSwitcher.Debug("GetCharaLayerController: New CharaLayerController");
             }
-            return charaLayerCtrlDict[ociTarget];
+            return charaLayerCtrlDict[ociTarget.charInfo];
         }
 
-        static public void UpdateDict(OCIChar _ociTarget)
+        internal static void Clear()
         {
-            bool verbose = LayerSwitcher.VerboseMessage.Value;
-            if (charaLayerCtrlDict.ContainsKey(_ociTarget))
+            charaLayerCtrlDict.Clear();
+            charaDict.Clear();
+        }
+
+        internal static void RemoveDict(ChaControl charInfo)
+        {
+            if (charaLayerCtrlDict.ContainsKey(charInfo))
             {
-                if (verbose)
-                {
-                    Console.WriteLine("UpdateDict: Update CharaLayerController");
-                }
-                charaLayerCtrlDict[_ociTarget].Update(_ociTarget);
+                charaLayerCtrlDict.Remove(charInfo);
+                charaDict.Remove(charInfo);
+            }
+        }
+
+        static internal void UpdateDict(ChaControl charInfo)
+        {
+            if (charaLayerCtrlDict.ContainsKey(charInfo))
+            {
+                LayerSwitcher.Debug("UpdateDict: Existed CharaLayerController");
+                charaLayerCtrlDict[charInfo].Update(charInfo);
             }
             else
             {
-                if(verbose)
-                {
-                    Console.WriteLine("UpdateDict: Not existed CharaLayerController");
-                }
+                LayerSwitcher.Debug("Error!UpdateDict: Not existed CharaLayerController");
+            }
+        }
+
+        static internal void MaintainDict(ChaControl charInfo, int category)
+        {
+            if (charaLayerCtrlDict.ContainsKey(charInfo))
+            {
+                LayerSwitcher.Debug("MaintainDict: Existed CharaLayerController");
+                charaLayerCtrlDict[charInfo].Maintain(charInfo, category);
+            }
+            else
+            {
+                LayerSwitcher.Debug("Error!MaintainDict: Not existed CharaLayerController");
             }
         }
 
