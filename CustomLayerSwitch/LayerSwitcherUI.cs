@@ -307,7 +307,7 @@ namespace StudioCustomLayerSwitcher
                 }
                 GUILayout.FlexibleSpace();
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Clear", btnstyle, IMGUIUtils.EmptyLayoutOptions))
+                if (GUILayout.Button("Refresh", btnstyle, IMGUIUtils.EmptyLayoutOptions))
                 {
                     LayerSwitcherMgr.UpdateDict(ociTarget.charInfo);
                 }
